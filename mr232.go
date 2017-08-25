@@ -2,7 +2,6 @@ package mr232
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 )
@@ -13,17 +12,17 @@ type MR232 struct {
 
 	stop      chan struct{}
 	done      chan struct{}
-	listeners []chan string
-	Lines     chan string
+	listeners []chan Message
+	Messages  chan Message
 }
 
 func Start(device string) (*MR232, error) {
 	s, err := StartSerial(device)
 	m := &MR232{
-		s:     s,
-		stop:  make(chan struct{}),
-		done:  make(chan struct{}),
-		Lines: make(chan string, 256),
+		s:        s,
+		stop:     make(chan struct{}),
+		done:     make(chan struct{}),
+		Messages: make(chan Message, 256),
 	}
 
 	go filterLoop(m)
@@ -31,17 +30,17 @@ func Start(device string) (*MR232, error) {
 	return m, err
 }
 
-func addListener(m *MR232) chan string {
-	listener := make(chan string)
+func addListener(m *MR232) chan Message {
+	listener := make(chan Message)
 	m.mu.Lock()
 	m.listeners = append(m.listeners, listener)
 	m.mu.Unlock()
 	return listener
 }
 
-func removeListener(m *MR232, listener chan string) {
+func removeListener(m *MR232, listener chan Message) {
 	m.mu.Lock()
-	var list []chan string
+	var list []chan Message
 	for _, l := range m.listeners {
 		if l != listener {
 			list = append(list, l)
@@ -51,12 +50,12 @@ func removeListener(m *MR232, listener chan string) {
 	m.mu.Unlock()
 }
 
-func (m *MR232) GroupStatus(groupID int) (int, int, int, int, error) {
+func (m *MR232) GroupStatus(groupID uint16) (*GroupStatusMessage, error) {
 	listener := addListener(m)
 
 	err := m.Send(fmt.Sprintf("stsg %d", groupID))
 	if err != nil {
-		return -1, -1, -1, -1, err
+		return nil, err
 	}
 
 	defer removeListener(m, listener)
@@ -64,17 +63,12 @@ func (m *MR232) GroupStatus(groupID int) (int, int, int, int, error) {
 	timeout := time.After(8 * time.Second)
 	for {
 		select {
-		case line := <-listener:
-			if strings.HasPrefix(line, fmt.Sprintf(">GS, %04d", groupID)) {
-				var gid, curr, prev, a, b int
-				_, err := fmt.Sscanf(line, ">GS, %d, %d, %d, %d, %d", &gid, &curr, &prev, &a, &b)
-				if err != nil {
-					return -1, -1, -1, -1, err
-				}
-				return curr, prev, a, b, nil
+		case msg := <-listener:
+			if gsm, ok := msg.(*GroupStatusMessage); ok && gsm.GroupID == groupID {
+				return gsm, nil
 			}
 		case <-timeout:
-			return -1, -1, -1, -1, fmt.Errorf("timeout")
+			return nil, fmt.Errorf("timeout")
 		}
 	}
 }
@@ -97,10 +91,11 @@ func filterLoop(m *MR232) {
 	for {
 		select {
 		case line := <-m.s.Lines:
+			msg := parseMessage(line)
 			for _, l := range m.listeners {
-				l <- line
+				l <- msg
 			}
-			m.Lines <- line
+			m.Messages <- msg
 		case <-m.stop:
 			close(m.done)
 			return

@@ -6,7 +6,7 @@ import (
 	"github.com/burke/mr232"
 )
 
-func onAndBrightness(currLevel, lnzLevel int) (bool, int) {
+func onAndBrightness(currLevel, lnzLevel uint8) (bool, uint8) {
 	if currLevel == 0 {
 		return false, lnzLevel
 	}
@@ -21,15 +21,15 @@ func main() {
 	defer m.Close()
 
 	go func() {
-		for _ = range m.Lines {
+		for _ = range m.Messages {
 		}
 	}()
 
-	currLevel, lnzLevel, _, _, err := m.GroupStatus(400)
+	gsm, err := m.GroupStatus(400)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	on, brightness := onAndBrightness(currLevel, lnzLevel)
+	on, brightness := onAndBrightness(gsm.CurrentLevel, gsm.LastNonZeroLevel)
 	fmt.Println(on, brightness)
 }
