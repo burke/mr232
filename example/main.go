@@ -6,7 +6,7 @@ import (
 	"github.com/burke/mr232"
 )
 
-func onAndBrightness(currLevel, lnzLevel uint8) (bool, uint8) {
+func onAndBrightness(currLevel, lnzLevel int) (bool, int) {
 	if currLevel == 0 {
 		return false, lnzLevel
 	}

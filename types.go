@@ -7,15 +7,15 @@ import (
 )
 
 const (
-	MultiLocationController     uint8 = 33
-	RoomPresetController        uint8 = 34
-	HousePresetController       uint8 = 35
-	RoomRemotePresetController  uint8 = 36
-	HouseRemotePresetController uint8 = 37
+	MultiLocationController     int = 33
+	RoomPresetController        int = 34
+	HousePresetController       int = 35
+	RoomRemotePresetController  int = 36
+	HouseRemotePresetController int = 37
 
-	DimmableSwitchController    uint8 = 65
-	NonDimmableSwitchController uint8 = 66
-	FanController               uint8 = 67
+	DimmableSwitchController    int = 65
+	NonDimmableSwitchController int = 66
+	FanController               int = 67
 )
 
 var (
@@ -24,7 +24,7 @@ var (
 	ErrShortCircuitDetected = errors.New("Short Circuit Detected")
 )
 
-func mapErrorCode(code uint8) error {
+func mapErrorCode(code int) error {
 	switch code {
 	case 0:
 		return nil
@@ -50,26 +50,26 @@ type GenericMessage struct {
 type GroupStatusMessage struct {
 	*GenericMessage
 
-	GroupID          uint16
-	CurrentLevel     uint8
-	LastNonZeroLevel uint8
-	DeviceType       uint8
+	GroupID          int
+	CurrentLevel     int
+	LastNonZeroLevel int
+	DeviceType       int
 	LastError        error
 }
 
 type RampGroupMessage struct {
 	*GenericMessage
 
-	GroupID     uint16
-	TargetLevel uint8
-	RampRate    uint8
+	GroupID     int
+	TargetLevel int
+	RampRate    int
 }
 
 type CancelRampMessage struct {
 	*GenericMessage
 
-	GroupID      uint16
-	CurrentLevel uint8
+	GroupID      int
+	CurrentLevel int
 }
 
 func (g *GenericMessage) String() string {
@@ -88,8 +88,8 @@ func parseMessage(line string) Message {
 }
 
 func parseGroupStatusMessage(line string) Message {
-	var gid uint16
-	var curr, prev, deviceType, lastErrCode uint8
+	var gid int
+	var curr, prev, deviceType, lastErrCode int
 
 	_, err := fmt.Sscanf(
 		line,
@@ -111,8 +111,8 @@ func parseGroupStatusMessage(line string) Message {
 }
 
 func parseRampGroupMessage(line string) Message {
-	var gid uint16
-	var level, rate uint8
+	var gid int
+	var level, rate int
 
 	_, err := fmt.Sscanf(line, "RG, %d, %d, %d", &gid, &level, &rate)
 	if err == nil {
@@ -128,8 +128,8 @@ func parseRampGroupMessage(line string) Message {
 }
 
 func parseCancelRampMessage(line string) Message {
-	var gid uint16
-	var level uint8
+	var gid int
+	var level int
 
 	_, err := fmt.Sscanf(line, "CR, %d, %d", &gid, &level)
 	if err == nil {
